@@ -6,6 +6,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, fireDB } from "../../firebase/FirebaseConfig";
 import Loader from "../../components/loader/Loader";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { getDocs } from "firebase/firestore";
 
 const Login = () => {
     const { loading, setLoading } = useContext(myContext);
@@ -52,35 +53,36 @@ const Login = () => {
                 where('uid', '==', users?.user?.uid)
             );
 
-            const unsubscribe = onSnapshot(q, (QuerySnapshot) => {
-                let userData;
-                QuerySnapshot.forEach((doc) => userData = doc.data());
+            const querySnapshot = await getDocs(q);
 
-                if (userData) {
-                    localStorage.setItem("users", JSON.stringify(userData));
-                    toast.success("Login Successful");
-
-                    if (userData.role === "user") {
-                        navigate('/user-dashboard');
-                    } else {
-                        navigate('/admin-dashboard');
-                    }
-                } else {
-                    toast.error("User data not found");
-                }
-
-                setUserLogin({
-                    email: "",
-                    password: ""
-                });
-                setLoading(false);
+            let userData = null;
+            querySnapshot.forEach((doc) => {
+                userData = doc.data();
             });
 
-            return () => unsubscribe();
+            if (userData) {
+                localStorage.setItem("users", JSON.stringify(userData));
+                toast.success("Login Successful");
+
+                if (userData.role === "user") {
+                    navigate('/user-dashboard');
+                } else {
+                    navigate('/admin-dashboard');
+                }
+            } else {
+                toast.error("User data not found");
+            }
+
+            setUserLogin({
+                email: "",
+                password: ""
+            });
+
         } catch (error) {
             console.error(error);
-            setLoading(false);
             toast.error(error.message || "Login Failed");
+        } finally {
+            setLoading(false);
         }
     };
 
